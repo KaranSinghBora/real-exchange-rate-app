@@ -38,3 +38,6 @@ streamlit run app.py
 
 ## Caveats
 Coverage varies by country and month. Some country codes have no matching IMF observations. The ISO country list is a selection universe and is not an IMF data-availability guarantee. Historic euro adoption and changes in CPI base-year conventions require economic interpretation. This app does not fabricate, interpolate, or forward-fill observations.
+
+## Sample-average lines
+The Real chart includes a dashed horizontal line at its selected-sample mean of **100**. The Nominal chart includes a dashed horizontal line at the mean of the available nominal S observations in the selected months (in actual currency units). Both mode shows both lines using their respective axes. The averages recompute when countries or dates change.

@@ -137,24 +137,45 @@ k2.metric("Average RER (RER*)", f"{rer_star:,.5g}")
 k3.metric("Average Real Index", f"{data['Real_Index'].mean():.6f}")
 k4.metric("Latest valid Real Index", f"{data['Real_Index'].dropna().iloc[-1]:.2f}")
 
+# Each mean uses available observations within the selected sample.
+# The Real Index has a mean of 100 by construction over valid RER months.
+nominal_mean = data["Nominal_S_C2_per_C1"].mean(skipna=True)
 plotdata = data.copy()
 plotdata.index = plotdata.index.to_timestamp()
+
+# Horizontal dashed averages are plotted as ordinary data traces so they
+# appear in the legend and attach to the correct axis in Both mode.
+def average_trace(value: float, label: str, color: str) -> go.Scatter:
+    return go.Scatter(
+        x=plotdata.index,
+        y=[value] * len(plotdata),
+        name=label,
+        mode="lines",
+        line=dict(color=color, dash="dash", width=2),
+        hovertemplate=f"{label}: %{{y:,.4f}}<extra></extra>",
+    )
+
 if mode == "Both":
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.add_trace(go.Scatter(x=plotdata.index, y=plotdata["Real_Index"], name="Real index (mean = 100)", mode="lines", connectgaps=False), secondary_y=False)
-    fig.add_trace(go.Scatter(x=plotdata.index, y=plotdata["Nominal_S_C2_per_C1"], name="Nominal S (actual currency units)", mode="lines", connectgaps=False), secondary_y=True)
+    fig.add_trace(go.Scatter(x=plotdata.index, y=plotdata["Real_Index"], name="Real Index", mode="lines", line=dict(color="#2563eb"), connectgaps=False), secondary_y=False)
+    fig.add_trace(average_trace(100.0, "Real average = 100", "#2563eb"), secondary_y=False)
+    fig.add_trace(go.Scatter(x=plotdata.index, y=plotdata["Nominal_S_C2_per_C1"], name="Nominal S (currency units)", mode="lines", line=dict(color="#ea580c"), connectgaps=False), secondary_y=True)
+    fig.add_trace(average_trace(nominal_mean, f"Nominal average = {nominal_mean:,.4f}", "#ea580c"), secondary_y=True)
     fig.update_yaxes(title_text="Real exchange rate index", secondary_y=False)
     fig.update_yaxes(title_text="Nominal: Country 2 currency / Country 1 currency", secondary_y=True)
 else:
     fig = go.Figure()
     if mode == "Real":
-        fig.add_trace(go.Scatter(x=plotdata.index, y=plotdata["Real_Index"], name="Real Index", mode="lines", connectgaps=False))
+        fig.add_trace(go.Scatter(x=plotdata.index, y=plotdata["Real_Index"], name="Real Index", mode="lines", line=dict(color="#2563eb"), connectgaps=False))
+        fig.add_trace(average_trace(100.0, "Real average = 100", "#2563eb"))
         fig.update_yaxes(title_text="Real exchange rate index (sample mean = 100)")
     else:
-        fig.add_trace(go.Scatter(x=plotdata.index, y=plotdata["Nominal_S_C2_per_C1"], name="Nominal S", mode="lines", connectgaps=False))
+        fig.add_trace(go.Scatter(x=plotdata.index, y=plotdata["Nominal_S_C2_per_C1"], name="Nominal S", mode="lines", line=dict(color="#ea580c"), connectgaps=False))
+        fig.add_trace(average_trace(nominal_mean, f"Nominal average = {nominal_mean:,.4f}", "#ea580c"))
         fig.update_yaxes(title_text="Country 2 currency / Country 1 currency")
 fig.update_layout(height=480, hovermode="x unified", legend=dict(orientation="h", y=1.12), margin=dict(t=65))
 st.plotly_chart(fig, use_container_width=True)
+st.caption(f"Dashed lines show sample averages: Real Index = 100 and nominal S = {nominal_mean:,.4f} country-2 currency units per country-1 currency unit. The nominal average uses available nominal observations in the selected months; all averages update when you change dates or countries.")
 
 st.latex(r"S_t=\frac{\text{C2 currency per USD}}{\text{C1 currency per USD}},\quad RER_t=S_t\frac{P_{1,t}}{P_{2,t}}")
 st.latex(r"RER^*=\operatorname{mean}_{t\in\text{valid selected months}}(RER_t),\quad RealIndex_t=100\frac{RER_t}{RER^*}")
